@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务培训随堂测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .question-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .active {
+            display: block;
+        }
+        .options li {
+            list-style: none;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .options li::before {
+            content: "○";
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        .selected::before {
+            content: "●";
+        }
+        .correct {
+            background: #e6ffe6;
+            border-color: #4CAF50;
+        }
+        .wrong {
+            background: #ffe6e6;
+            border-color: #f44336;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        #stats {
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        td, th {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="questions">
+        <!-- 题目容器由JS动态生成 -->
+    </div>
+
+    <div id="stats">
+        <h2>测试结果</h2>
+        <table>
+            <tr>
+                <th>答对题目</th>
+                <th>答错题目</th>
+                <th>正确率</th>
+            </tr>
+            <tr>
+                <td id="correct-count">0</td>
+                <td id="wrong-count">0</td>
+                <td id="accuracy">0%</td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "1. 经营者名称填写时，必须与以下哪项一致？",
+                options: [
+                    "A. 法定代表人身份证",
+                    "B. 营业执照或其他主体资格证明",
+                    "C. 经营场所备案证明",
+                    "D. 健康证编号"
+                ],
+                correct: 1
+            },
+            {
+                question: "2. 申请材料中，如需提交复印件，正确的操作是？",
+                options: [
+                    "A. 直接提交复印件",
+                    "B. 复印件注明“与原件一致”并由申请人签字或盖章",
+                    "C. 仅需提交原件",
+                    "D. 复印件无需任何标注"
+                ],
+                correct: 1
+            },
+            {
+                question: "3. 若主体业态为“食品销售经营者”，且经营项目涉及现场制售，应勾选哪一项？",
+                options: [
+                    "A. 是否从事食品批发销售",
+                    "B. 是否利用自动设备销售",
+                    "C. 是否现场制售",
+                    "D. 是否含网络经营"
+                ],
+                correct: 2
+            },
+            {
+                question: "4. 在“主体业态”中勾选“集中用餐单位食堂”时，以下哪项需要填写？",
+                options: [
+                    "A. 网站地址",
+                    "B. 供餐学校名称、地址及供餐量",
+                    "C. 自动售货设备位置",
+                    "D. 承包企业统一信用代码"
+                ],
+                correct: 1
+            },
+            {
+                question: "5. 申请销售散装熟食制品，需额外提交的材料是？",
+                options: [
+                    "A. 自动售货设备合格证明",
+                    "B. 食品安全第三方机构检验报告",
+                    "C. 与挂钩生产单位的合作协议及生产单位《食品生产许可证》复印件",
+                    "D. 从业人员健康证"
+                ],
+                correct: 2
+            }
+        ];
+
+        let currentQuestion = 0;
+        let results = [];
+
+        // 初始化题目
+        function initQuestions() {
+            const container = document.getElementById('questions');
+            
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-container';
+                questionDiv.innerHTML = `
+                    <h3>${q.question}</h3>
+                    <ul class="options">${q.options.map((o, i) => `
+                        <li data-index="${i}">${o}</li>
+                    `).join('')}</ul>
+                    <div class="nav-buttons">
+                        <button onclick="prevQuestion()" ${index === 0 ? 'disabled' : ''}>上一题</button>
+                        <button onclick="nextQuestion()">${index === questions.length-1 ? '完成测试' : '下一题'}</button>
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+
+            showQuestion(currentQuestion);
+        }
+
+        // 显示指定题目
+        function showQuestion(index) {
+            document.querySelectorAll('.question-container').forEach((div, i) => {
+                div.classList.toggle('active', i === index);
+            });
+        }
+
+        // 处理选项选择
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.options li')) {
+                const li = e.target.closest('li');
+                if (li.parentElement.querySelector('.selected')) return;
+
+                const questionIndex = [...document.querySelectorAll('.question-container')]
+                    .findIndex(div => div.contains(li));
+                const correctIndex = questions[questionIndex].correct;
+                
+                li.classList.add('selected');
+                if (parseInt(li.dataset.index) === correctIndex) {
+                    li.classList.add('correct');
+                    results[questionIndex] = true;
+                } else {
+                    li.classList.add('wrong');
+                    results[questionIndex] = false;
+                    // 显示正确答案
+                    li.parentElement.children[correctIndex].classList.add('correct');
+                }
+            }
+        });
+
+        // 导航功能
+        function prevQuestion() {
+            if (currentQuestion > 0) {
+                showQuestion(--currentQuestion);
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < questions.length - 1) {
+                showQuestion(++currentQuestion);
+            } else {
+                showStats();
+            }
+        }
+
+        // 显示统计结果
+        function showStats() {
+            document.getElementById('questions').style.display = 'none';
+            document.getElementById('stats').style.display = 'block';
+            
+            const correct = results.filter(r => r).length;
+            document.getElementById('correct-count').textContent = correct;
+            document.getElementById('wrong-count').textContent = results.length - correct;
+            document.getElementById('accuracy').textContent = 
+                ((correct / results.length) * 100).toFixed(0) + '%';
+        }
+
+        // 初始化
+        initQuestions();
+    </script>
+</body>
+</html>
